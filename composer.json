@@ -1,0 +1,37 @@
+{
+    "name":        "wernerdweight/image-manager",
+    "type":        "library",
+    "description": "Utility for image resizing, cropping and encrypting.",
+    "keywords":    [
+        "image",
+        "resize",
+        "crop",
+        "encrypt"
+    ],
+    "homepage":    "https://gitlab.com/wernerdweight/wdImageManager",
+    "license":     "MIT",
+
+    "authors": [
+        {
+            "name": "Werner Dweight",
+            "email": "wd@wernerdweight.com"
+        }
+    ],
+
+    "require": {
+        "php":  ">=5.5.9"
+    },
+
+    "require-dev": {},
+
+    "suggest": {},
+
+    "autoload": {
+        "psr-0": {
+            "WernerDweight\\ImageManager\\": ""
+        }
+    },
+
+    "target-dir": "WernerDweight/ImageManager"
+
+}
