@@ -11,7 +11,7 @@ Class Image{
 	private $encrypted;
 
 	public function __construct($path = null,$ext = null,$secret = null){
-		$this->secret = mhash(MHASH_MD5,($secret ? $secret : 'I did not want to tell you, but this is not secret at all (change this in config)!'));
+		$this->secret = hash('sha256',($secret ? $secret : 'I did not want to tell you, but this is not secret at all (change this in config)!'));
 		if($path) $this->load($path);
 		if($ext) $this->ext = $ext;
 	}
