@@ -11,7 +11,7 @@ Class Image{
 	private $encrypted;
 
 	public function __construct($path = null,$ext = null,$secret = null){
-		$this->secret = hash('sha256',($secret ? $secret : 'I did not want to tell you, but this is not secret at all (change this in config)!'));
+		$this->secret = substr(hash('sha256',($secret ? $secret : 'I did not want to tell you, but this is not secret at all (change this in config)!')),0,32);
 		if($path) $this->load($path);
 		if($ext) $this->ext = $ext;
 	}
@@ -137,17 +137,17 @@ Class Image{
 		ob_end_clean();
 
 		$this->workingData = rtrim(
-				mcrypt_encrypt(
-					MCRYPT_RIJNDAEL_128,
-					$this->secret, $this->workingData,
-					MCRYPT_MODE_ECB,
-					mcrypt_create_iv(
-						mcrypt_get_iv_size(
-							MCRYPT_RIJNDAEL_128,
-							MCRYPT_MODE_ECB
-						),
-						MCRYPT_RAND
-					)
+			mcrypt_encrypt(
+				MCRYPT_RIJNDAEL_128,
+				$this->secret, $this->workingData,
+				MCRYPT_MODE_ECB,
+				mcrypt_create_iv(
+					mcrypt_get_iv_size(
+						MCRYPT_RIJNDAEL_128,
+						MCRYPT_MODE_ECB
+					),
+					MCRYPT_RAND
+				)
 			), "\0"
 		);
 
