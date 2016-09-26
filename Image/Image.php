@@ -9,9 +9,11 @@ Class Image{
 	private $workingData;
 	private $secret;
 	private $encrypted;
+	private $autorotate;
 
-	public function __construct($path = null,$ext = null,$secret = null){
+	public function __construct($path = null,$ext = null,$secret = null,$autorotate = false){
 		$this->secret = substr(hash('sha256',($secret ? $secret : 'I did not want to tell you, but this is not secret at all (change this in config)!')),0,32);
+		$this->autorotate = $autorotate;
 		if($path) $this->load($path);
 		if($ext) $this->ext = $ext;
 	}
@@ -25,9 +27,29 @@ Class Image{
 		$this->encrypted = false;
 	}
 
+	private function autoRotate($path){
+		$exifData = exif_read_data($path);
+		if(true === isset($exifData['Orientation'])){
+			switch ($exifData['Orientation']) {
+				case 3:
+					$this->workingData = imagerotate($this->workingData,180,0);
+					break;
+				case 6:
+					$this->workingData = imagerotate($this->workingData,-90,0);
+					break;
+				case 8:
+					$this->workingData = imagerotate($this->workingData,90,0);
+					break;
+			}
+		}
+	}
+
 	private function imagecreatefromjpeg($path){
 		$this->workingData = imagecreatefromjpeg($path);
 		$this->encrypted = false;
+		if(true === $this->autorotate){
+			$this->autoRotate($path);
+		}
 	}
 
 	private function imagecreatefrompng($path){

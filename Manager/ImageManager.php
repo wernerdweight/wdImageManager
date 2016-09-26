@@ -7,14 +7,16 @@ use WernerDweight\ImageManager\Image\Image;
 Class ImageManager{
 	private $image;
 	private $secret;
+	private $autorotate;
 
-	public function __construct($secret = null){
+	public function __construct($secret = null,$autorotate = false){
 		if($secret) $this->secret = $secret;
+		$this->autorotate = $autorotate;
 	}
 
 	public function loadImage($path){
 		try {
-			$this->image = new Image($path,null,$this->secret);
+			$this->image = new Image($path,null,$this->secret,$this->autorotate);
 		} catch (\Exception $e) {
 			throw $e;
 		}
@@ -36,7 +38,7 @@ Class ImageManager{
 		else $encrypt = false;
 
 		$dimensions = $this->adjustDimenstions($width,$height,$crop);
-		$tmp = new Image(null,$this->image->getExt());
+		$tmp = new Image(null,$this->image->getExt(),$this->secret,$this->autorotate);
 		$tmp->create($dimensions);
 		imagecopyresampled($tmp->getData(),$this->image->getData(),0,0,0,0,$dimensions['width'],$dimensions['height'],$this->image->getWidth(),$this->image->getHeight());
 		$this->image->destroy();
@@ -58,7 +60,7 @@ Class ImageManager{
 		$crop = $this->adjustCrop($width,$height);
 		$centerX = ($this->image->getWidth()/2) - ($crop['width']/2);
 		$centerY = ($this->image->getHeight()/2) - ($crop['height']/2);
-		$tmp = new Image(null,$this->image->getExt());
+		$tmp = new Image(null,$this->image->getExt(),$this->secret,$this->autorotate);
 		$tmp->create(array('width' => $width,'height' => $height));
 		imagecopyresampled($tmp->getData(),$this->image->getData(),0,0,$centerX,$centerY,$width,$height,$crop['width'],$crop['height']);
 		$this->image->destroy();
