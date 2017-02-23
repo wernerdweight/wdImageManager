@@ -8,7 +8,7 @@
         "crop",
         "encrypt"
     ],
-    "homepage":    "https://gitlab.com/wernerdweight/wdImageManager",
+    "homepage":    "https://github.com/wernerdweight/wdImageManager",
     "license":     "MIT",
 
     "authors": [
