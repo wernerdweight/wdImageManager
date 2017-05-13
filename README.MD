@@ -1,7 +1,7 @@
 Werner Dweight's ImageManager Bundle
 ====================================
 
-This utility adds support for image resizing and cropping.
+This utility adds support for image resizing, cropping and watermarking.
 
 Installation
 ------------
@@ -11,7 +11,7 @@ Installation
 ```js
 	{
 		"require": {
-			"wernerdweight/image-manager": "~1.0"
+			"wernerdweight/image-manager": "~2.0"
 		}
 	}
 ```
