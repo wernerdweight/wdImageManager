@@ -3,6 +3,8 @@ Werner Dweight's ImageManager Bundle
 
 This utility adds support for image resizing, cropping and watermarking.
 
+[![Build Status](https://travis-ci.org/wernerdweight/wdImageManager.svg?branch=master)](https://travis-ci.org/wernerdweight/wdImageManager)
+
 Installation
 ------------
 
