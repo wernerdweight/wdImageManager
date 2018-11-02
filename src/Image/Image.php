@@ -5,63 +5,145 @@ namespace WernerDweight\ImageManager\Image;
 
 class Image
 {
+    /** @var string */
+    private const DEFAULT_ENCRYPTION_METHOD = 'AES-256-CBC';
+    /** @var int */
+    private const ORIENTATION_UPSIDE_DOWN = 3;
+    /** @var int */
+    private const ORIENTATION_ROTATE_COUNTER_CLOCKWISE = 6;
+    /** @var int */
+    private const ORIENTATION_ROTATE_CLOCKWISE = 8;
+    /** @var string */
+    private const FORMAT_JPEG = 'jpeg';
+    /** @var string */
+    private const FORMAT_JPG = 'jpg';
+    /** @var string */
+    private const FORMAT_PNG = 'png';
+    /** @var string */
+    private const FORMAT_GIF = 'gif';
+    /** @var string */
+    private const FORMAT_WD_IMAGE = 'wdImage';
+    /** @var string[] */
+    private const EXTENSION_MAPPING = [
+        'jpg' => self::FORMAT_JPEG,
+        'jpeg' => self::FORMAT_JPEG,
+        'png' => self::FORMAT_PNG,
+        'gif' => self::FORMAT_GIF,
+        'wdimage' => self::FORMAT_WD_IMAGE,
+    ];
+
+    /** @var int */
     private $width;
+
+    /** @var int */
     private $height;
-    private $ext;
+
+    /** @var string|null */
+    private $extension;
+
+    /** @var resource */
     private $workingData;
+
+    /** @var string */
     private $secret;
+
+    /** @var bool */
     private $encrypted;
+
+    /** @var bool */
     private $autorotate;
 
-    public function __construct(?string $path = null, ?string $ext = null, ?string $secret = null, bool $autorotate = false)
-    {
-        $this->secret = substr(hash('sha256', ($secret ? $secret : 'I did not want to tell you, but this is not secret at all (change this in config)!')), 0, 32);
+    /** @var string */
+    private $encryptionMethod;
+
+    /**
+     * Image constructor.
+     * @param string $secret
+     * @param null|string $path
+     * @param null|string $extension
+     * @param bool $autorotate
+     * @param string $encryptionMethod
+     */
+    public function __construct(
+        string $secret,
+        ?string $path = null,
+        ?string $extension = null,
+        bool $autorotate = false,
+        string $encryptionMethod = self::DEFAULT_ENCRYPTION_METHOD
+    ) {
+        $this->secret = $secret;
         $this->autorotate = $autorotate;
-        if ($path) {
+        $this->encryptionMethod = $encryptionMethod;
+        if (null !== $path) {
             $this->load($path);
         }
-        if ($ext) {
-            $this->ext = $ext;
+        if (null !== $extension) {
+            $this->extension = strtolower($extension);
         }
     }
 
-    public function create(array $dimensions): self
+    /**
+     * @param int $width
+     * @param int $height
+     * @return Image
+     */
+    public function create(int $width, int $height): self
     {
-        $this->width = $dimensions['width'];
-        $this->height = $dimensions['height'];
-        $this->workingData = imagecreatetruecolor($this->width, $this->height);
-        if ('png' === $this->ext) {
+        $this->width = $width;
+        $this->height = $height;
+        $imageData = imagecreatetruecolor($this->width, $this->height);
+        if (false === $imageData) {
+            throw new \RuntimeException('Unable to create new image!');
+        }
+        $this->workingData = $imageData;
+        if (self::FORMAT_PNG === $this->extension) {
             $this->setTransparency(false, true);
         }
-        if ('gif' === $this->ext) {
+        if (self::FORMAT_GIF === $this->extension) {
             $this->setTransparency();
         }
         $this->encrypted = false;
         return $this;
     }
 
+    /**
+     * @param string $path
+     * @return Image
+     */
     private function autoRotate(string $path): self
     {
         $exifData = exif_read_data($path);
-        if (true === isset($exifData['Orientation'])) {
+        if (true === array_key_exists('Orientation', $exifData['Orientation'])) {
+            $imageData = null;
             switch ($exifData['Orientation']) {
-                case 3:
-                    $this->workingData = imagerotate($this->workingData, 180, 0);
+                case self::ORIENTATION_UPSIDE_DOWN:
+                    $imageData = imagerotate($this->workingData, 180, 0);
                     break;
-                case 6:
-                    $this->workingData = imagerotate($this->workingData, -90, 0);
+                case self::ORIENTATION_ROTATE_COUNTER_CLOCKWISE:
+                    $imageData = imagerotate($this->workingData, -90, 0);
                     break;
-                case 8:
-                    $this->workingData = imagerotate($this->workingData, 90, 0);
+                case self::ORIENTATION_ROTATE_CLOCKWISE:
+                    $imageData = imagerotate($this->workingData, 90, 0);
                     break;
+            }
+            if (null !== $imageData) {
+                $this->workingData = $imageData;
             }
         }
         return $this;
     }
 
-    private function imagecreatefromjpeg(string $path): self
+    /**
+     * @param string $path
+     * @return Image
+     */
+    private function createFromJpeg(string $path): self
     {
-        $this->workingData = imagecreatefromjpeg($path);
+        $imageData = imagecreatefromjpeg($path);
+        if (false === $imageData) {
+            throw new \RuntimeException(sprintf('Unable to create JPEG image from %s!', $path));
+        }
+        $this->workingData = $imageData;
         $this->encrypted = false;
         if (true === $this->autorotate) {
             $this->autoRotate($path);
@@ -69,225 +151,335 @@ class Image
         return $this;
     }
 
-    private function imagecreatefrompng(string $path): self
+    /**
+     * @param string $path
+     * @return Image
+     */
+    private function createFromPng(string $path): self
     {
-        $this->workingData = imagecreatefrompng($path);
+        $imageData = imagecreatefrompng($path);
+        if (false === $imageData) {
+            throw new \RuntimeException(sprintf('Unable to create PNG image from %s!', $path));
+        }
+        $this->workingData = $imageData;
         $this->setTransparency(false, true);
         $this->encrypted = false;
         return $this;
     }
 
-    private function imagecreatefromgif(string $path): self
+    /**
+     * @param string $path
+     * @return Image
+     */
+    private function createFromGif(string $path): self
     {
-        $this->workingData = imagecreatefromgif($path);
+        $imageData = imagecreatefromgif($path);
+        if (false === $imageData) {
+            throw new \RuntimeException(sprintf('Unable to create GIF image from %s!', $path));
+        }
+        $this->workingData = $imageData;
         $this->setTransparency();
         $this->encrypted = false;
         return $this;
     }
 
-    private function imagecreatefromwdImage(string $path): self
+    /**
+     * @param string $path
+     * @return Image
+     */
+    private function createFromEncrypted(string $path): self
     {
-        $this->workingData = file_get_contents($path);
+        /** @var resource $imageData */
+        $imageData = file_get_contents($path);
+        $this->workingData = $imageData;
         $this->encrypted = true;
         return $this;
     }
 
-    public function load(string $path): self
+    /**
+     * @param string $path
+     * @return Image
+     */
+    private function setExtensionFromPath(string $path): self
     {
-        $this->ext = strtolower(substr(strrchr($path, '.'), 1));
-
-        try {
-            switch ($this->getType($this->ext)) {
-                case 'jpeg':
-                    $this->imagecreatefromjpeg($path);
-                    break;
-                case 'png':
-                    $this->imagecreatefrompng($path);
-                    break;
-                case 'gif':
-                    $this->imagecreatefromgif($path);
-                    break;
-                case 'wdImage':
-                    $this->imagecreatefromwdImage($path);
-                    break;
-                default:
-                    throw new \Exception('This image format is not supported!', 1);
-            }
-        } catch (\Throwable $e) {
-            throw $e;
+        $lastDotPosition = strrchr($path, '.');
+        if (false === $lastDotPosition) {
+            throw new \RuntimeException('File extension is missing!');
         }
 
-        if (!$this->encrypted) {
-            $this->getDimensions();
+        $originalExtension = strtolower(substr($lastDotPosition, 1));
+        if (false === array_key_exists($originalExtension, self::EXTENSION_MAPPING)) {
+            throw new \RuntimeException(sprintf('Unsupported image format %s!', $originalExtension));
+        }
+
+        $this->extension = self::EXTENSION_MAPPING[$originalExtension];
+        return $this;
+    }
+
+    /**
+     * @param string $path
+     * @return Image
+     */
+    private function loadFromPath(string $path): self
+    {
+        switch ($this->extension) {
+            case self::FORMAT_JPEG:
+                $this->createFromJpeg($path);
+                break;
+            case self::FORMAT_PNG:
+                $this->createFromPng($path);
+                break;
+            case self::FORMAT_GIF:
+                $this->createFromGif($path);
+                break;
+            case self::FORMAT_WD_IMAGE:
+                $this->createFromEncrypted($path);
+                break;
+            default:
+                throw new \RuntimeException('This image format is not supported!');
         }
         return $this;
     }
 
-    private function getDimensions(): self
+    /**
+     * @param string $path
+     * @return Image
+     */
+    private function load(string $path): self
     {
-        $this->width = imagesx($this->workingData);
-        $this->height = imagesy($this->workingData);
+        return $this
+            ->setExtensionFromPath($path)
+            ->loadFromPath($path)
+            ->updateDimensions();
+    }
+
+    /**
+     * @return Image
+     */
+    private function updateDimensions(): self
+    {
+        if (true !== $this->encrypted) {
+            $this->width = imagesx($this->workingData);
+            $this->height = imagesy($this->workingData);
+        }
         return $this;
     }
 
-    public function save(string $path, string $name, ?string $ext = null, int $quality = 100): bool
+    /**
+     * @param string $path
+     * @param string $name
+     * @param null|string $extension
+     * @param int $quality
+     * @return bool
+     */
+    public function save(string $path, string $name, ?string $extension = null, int $quality = 100): bool
     {
-        if (!is_dir($path)) {
+        if (false === is_dir($path)) {
             mkdir($path, 0777, true);
         }
-        if (null === $ext) {
-            $ext = $this->ext;
+        if (null === $extension) {
+            /** @var string $extension */
+            $extension = $this->extension;
         }
-        if ($this->encrypted) {
-            file_put_contents($path . $name . '.wdImage', $this->workingData);
+        if (true === $this->encrypted) {
+            file_put_contents($path . $name . '.' . self::FORMAT_WD_IMAGE, $this->workingData);
             return true;
-        } elseif (imagetypes()) {
-            switch ($ext) {
-                case 'gif':
-                    if (IMG_GIF) {
-                        imagegif($this->workingData, $path . $name . '.' . $ext);
-                    }
+        } elseif (0 !== imagetypes()) {
+            $filename = $path . $name . '.' . $extension;
+            switch (strtolower($extension)) {
+                case self::FORMAT_GIF:
+                    imagegif($this->workingData, $filename);
                     break;
-                case 'jpeg':
-                case 'jpg':
-                    if (IMG_JPG) {
-                        imagejpeg($this->workingData, $path . $name . '.' . $ext, $quality);
-                    }
+                case self::FORMAT_JPEG:
+                case self::FORMAT_JPG:
+                    imagejpeg($this->workingData, $filename, $quality);
                     break;
-                case 'png':
-                    if (IMG_PNG) {
-                        imagepng($this->workingData, $path . $name . '.' . $ext, round(9 - ((9 * $quality) / 100)));
-                    }
+                case self::FORMAT_PNG:
+                    imagepng($this->workingData, $filename, (int)round(9 - ((9 * $quality) / 100)));
                     break;
                 default:
-                    throw new \Exception('Unsupported file type', 1);
+                    throw new \RuntimeException('Unsupported file type');
             }
             return false;
         }
     }
 
-    private function getType(string $ext): string
+    /**
+     * @return int
+     */
+    private function getInitializationVectorLength(): int
     {
-        switch ($ext) {
-            case 'jpg':
-            case 'jpeg':
-                return 'jpeg';
-            case 'png':
-                return 'png';
-            case 'gif':
-                return 'gif';
-            case 'wdimage':
-                return 'wdImage';
-            default:
-                throw new \Exception('Unsupported file type', 1);
+        $initializationVectorLength = openssl_cipher_iv_length($this->encryptionMethod);
+        if (false === $initializationVectorLength) {
+            throw new \RuntimeException('Unable to create initialization vector! Check encryption method.');
+        } else {
+            return $initializationVectorLength;
         }
     }
 
+    /**
+     * @return string
+     */
+    private function createInitializationVector(): string
+    {
+        $initializationVector = openssl_random_pseudo_bytes(
+            $this->getInitializationVectorLength()
+        );
+        if (false === $initializationVector) {
+            throw new \RuntimeException('Unable to create initialization vector!');
+        } else {
+            return $initializationVector;
+        }
+    }
+
+    /**
+     * @return Image
+     */
     public function encrypt(): self
     {
         if ($this->encrypted) {
-            throw new \Exception("Can't encrypt encrypted image", 1);
+            throw new \RuntimeException('Unable to encrypt encrypted image!');
         }
 
-        /// use buffer to get image content
+        // use buffer to get image content
         ob_start();
         imagejpeg($this->workingData, null, 100);
-        $this->workingData = ob_get_contents();
+        $imageData = ob_get_contents();
         ob_end_clean();
+        if (false === $imageData) {
+            throw new \RuntimeException('Unable to fetch image data!');
+        }
 
-        $this->workingData = rtrim(
-            mcrypt_encrypt(
-                MCRYPT_RIJNDAEL_128,
-                $this->secret,
-                $this->workingData,
-                MCRYPT_MODE_ECB,
-                mcrypt_create_iv(
-                    mcrypt_get_iv_size(
-                        MCRYPT_RIJNDAEL_128,
-                        MCRYPT_MODE_ECB
-                    ),
-                    MCRYPT_RAND
-                )
-            ),
-            "\0"
+        $initializationVector = $this->createInitializationVector();
+        $encryptedData = openssl_encrypt(
+            $imageData,
+            $this->encryptionMethod,
+            $this->secret,
+            OPENSSL_RAW_DATA,
+            $initializationVector
         );
-
+        if (false === $encryptedData) {
+            throw new \RuntimeException('Data encryption failed!');
+        }
+        /** @var resource $encodedData */
+        $encodedData = base64_encode($initializationVector . rtrim($encryptedData, "\0"));
+        $this->workingData = $encodedData;
         $this->encrypted = true;
 
         return $this;
     }
 
+    /**
+     * @return Image
+     */
     public function decrypt(): self
     {
         if (!$this->encrypted) {
-            throw new \Exception("Can't decrypt unencrypted image", 1);
+            throw new \RuntimeException('Unable to decrypt unencrypted image');
         }
 
-        $this->workingData = rtrim(
-            mcrypt_decrypt(
-                MCRYPT_RIJNDAEL_128,
-                $this->secret,
-                $this->workingData,
-                MCRYPT_MODE_ECB,
-                mcrypt_create_iv(
-                    mcrypt_get_iv_size(
-                        MCRYPT_RIJNDAEL_128,
-                        MCRYPT_MODE_ECB
-                    ),
-                    MCRYPT_RAND
-                )
-            ),
-            "\0"
+        $encodedData = (string)$this->workingData;
+        $decodedData = base64_decode($encodedData);
+        if (false === $decodedData) {
+            throw new \RuntimeException('Unable to decode image data!');
+        }
+
+        $initializationVectorLength = $this->getInitializationVectorLength();
+        $initializationVector = substr($decodedData, 0, $initializationVectorLength);
+        $decodedImageData = substr($decodedData, $initializationVectorLength);
+        $decryptedData = openssl_decrypt(
+            $decodedImageData,
+            $this->encryptionMethod,
+            $this->secret,
+            OPENSSL_RAW_DATA,
+            $initializationVector
         );
+        if (false === $decryptedData) {
+            throw new \RuntimeException('Unable to decrypt image data!');
+        }
+
+        $decryptedImageData = rtrim($decryptedData, "\0");
         $this->encrypted = false;
 
-        $this->workingData = imagecreatefromstring($this->workingData);
+        $imageData = imagecreatefromstring($decryptedImageData);
+        if (false === $imageData) {
+            throw new \RuntimeException('Unable to create image from string!');
+        }
 
-        if (!$this->width || !$this->height) {
-            $this->getDimensions();
+        $this->workingData = $imageData;
+
+        if (null === $this->width || null === $this->height) {
+            $this->updateDimensions();
         }
 
         return $this;
     }
 
+    /**
+     * @return bool
+     */
     public function getEncrypted(): bool
     {
         return $this->encrypted;
     }
 
+    /**
+     * @return Image
+     */
     public function destroy(): self
     {
         imagedestroy($this->workingData);
         return $this;
     }
 
+    /**
+     * @return resource
+     */
     public function getData()
     {
         return $this->workingData;
     }
 
+    /**
+     * @param resource $data
+     * @return Image
+     */
     public function setData($data): self
     {
         $this->workingData = $data;
         return $this;
     }
 
+    /**
+     * @return int
+     */
     public function getWidth(): int
     {
         return $this->width;
     }
 
+    /**
+     * @return int
+     */
     public function getHeight(): int
     {
         return $this->height;
     }
 
-    public function getExt(): string
+    /**
+     * @return null|string
+     */
+    public function getExtension(): ?string
     {
-        return $this->ext;
+        return $this->extension;
     }
 
-    private function setTransparency($alphaBlending = null, $saveAlpha = null): self
+    /**
+     * @param bool|null $alphaBlending
+     * @param bool|null $saveAlpha
+     * @return Image
+     */
+    private function setTransparency(?bool $alphaBlending = null, ?bool $saveAlpha = null): self
     {
         imagecolortransparent($this->workingData, imagecolorallocate($this->workingData, 0, 0, 0));
         if (null !== $alphaBlending) {

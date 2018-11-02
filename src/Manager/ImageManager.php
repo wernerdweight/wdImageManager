@@ -7,41 +7,64 @@ use WernerDweight\ImageManager\Image\Image;
 
 class ImageManager
 {
+    /** @var string */
+    private const WATERMARK_SIZE_COVER = 'cover';
+    /** @var string */
+    private const WATERMARK_SIZE_CONTAIN = 'contain';
+
+    /** @var Image */
     private $image;
+
+    /** @var string */
     private $secret;
+
+    /** @var bool */
     private $autorotate;
 
-    public function __construct(?string $secret = null, bool $autorotate = false)
+    /**
+     * ImageManager constructor.
+     * @param string $secret
+     * @param bool $autorotate
+     */
+    public function __construct(string $secret, bool $autorotate = false)
     {
-        if ($secret) {
-            $this->secret = $secret;
-        }
+        $this->secret = $secret;
         $this->autorotate = $autorotate;
     }
 
+    /**
+     * @param string $path
+     * @return ImageManager
+     */
     public function loadImage(string $path): self
     {
-        try {
-            $this->image = new Image($path, null, $this->secret, $this->autorotate);
-        } catch (\Throwable $e) {
-            throw $e;
-        }
+        $this->image = new Image($this->secret, $path, null, $this->autorotate);
         return $this;
     }
 
-    public function saveImage(string $path, string $name, ?string $ext = null, int $quality = 100): self
+    /**
+     * @param string $path
+     * @param string $name
+     * @param null|string $extension
+     * @param int $quality
+     * @return ImageManager
+     */
+    public function saveImage(string $path, string $name, ?string $extension = null, int $quality = 100): self
     {
-        try {
-            $this->image->save($path, $name, $ext, $quality);
-        } catch (\Throwable $e) {
-            throw $e;
-        }
+        $this->image->save($path, $name, $extension, $quality);
         return $this;
     }
 
-    public function resizeImage(Image &$image, int $width, int $height, bool $crop = false): self
+    /**
+     * @param Image $image
+     * @param int $width
+     * @param int $height
+     * @param bool $crop
+     * @return ImageManager
+     */
+    public function resizeImage(Image $image, int $width, int $height, bool $crop = false): self
     {
-        if ($image->getEncrypted()) {
+        if (true === $image->getEncrypted()) {
             $this->decryptImage($image);
             $encrypt = true;
         } else {
@@ -49,29 +72,53 @@ class ImageManager
         }
 
         $dimensions = $this->getAdjustedImageDimensions($image, $width, $height, $crop);
-        $tmp = new Image(null, $image->getExt(), $this->secret, $this->autorotate);
-        $tmp->create($dimensions);
-        imagecopyresampled($tmp->getData(), $image->getData(), 0, 0, 0, 0, $dimensions['width'], $dimensions['height'], $image->getWidth(), $image->getHeight());
+        $tmp = new Image($this->secret, null, $image->getExtension(), $this->autorotate);
+        $tmp->create($dimensions['width'], $dimensions['height']);
+        imagecopyresampled(
+            $tmp->getData(),
+            $image->getData(),
+            0,
+            0,
+            0,
+            0,
+            $dimensions['width'],
+            $dimensions['height'],
+            $image->getWidth(),
+            $image->getHeight()
+        );
         $image->destroy();
         $image = $tmp;
-        if ($crop) {
+
+        if (true === $crop) {
             $this->cropImage($image, $width, $height);
         }
 
-        if ($encrypt) {
+        if (true === $encrypt) {
             $this->encryptImage($image);
         }
         return $this;
     }
 
+    /**
+     * @param int $width
+     * @param int $height
+     * @param bool $crop
+     * @return ImageManager
+     */
     public function resize(int $width, int $height, bool $crop = false): self
     {
         return $this->resizeImage($this->image, $width, $height, $crop);
     }
 
-    public function cropImage(Image &$image, int $width, int $height): self
+    /**
+     * @param Image $image
+     * @param int $width
+     * @param int $height
+     * @return ImageManager
+     */
+    public function cropImage(Image $image, int $width, int $height): self
     {
-        if ($image->getEncrypted()) {
+        if (true === $image->getEncrypted()) {
             $this->decryptImage($image);
             $encrypt = true;
         } else {
@@ -81,49 +128,83 @@ class ImageManager
         $crop = $this->getAdjustedImageCropDimensions($image, $width, $height);
         $centerX = ($image->getWidth() / 2) - ($crop['width'] / 2);
         $centerY = ($image->getHeight() / 2) - ($crop['height'] / 2);
-        $tmp = new Image(null, $image->getExt(), $this->secret, $this->autorotate);
-        $tmp->create([
-            'width' => $width,
-            'height' => $height,
-        ]);
-        imagecopyresampled($tmp->getData(), $image->getData(), 0, 0, $centerX, $centerY, $width, $height, $crop['width'], $crop['height']);
+        $tmp = new Image($this->secret, null, $image->getExtension(), $this->autorotate);
+        $tmp->create($width, $height);
+        imagecopyresampled(
+            $tmp->getData(),
+            $image->getData(),
+            0,
+            0,
+            (int)$centerX,
+            (int)$centerY,
+            $width,
+            $height,
+            $crop['width'],
+            $crop['height']
+        );
         $image->destroy();
         $image = $tmp;
 
-        if ($encrypt) {
+        if (true === $encrypt) {
             $this->encryptImage($image);
         }
         return $this;
     }
 
+    /**
+     * @param int $width
+     * @param int $height
+     * @return ImageManager
+     */
     public function crop(int $width, int $height): self
     {
         return $this->cropImage($this->image, $width, $height);
     }
 
-    public function encryptImage(Image &$image): self
+    /**
+     * @param Image $image
+     * @return ImageManager
+     */
+    public function encryptImage(Image $image): self
     {
         $image->encrypt();
         return $this;
     }
 
+    /**
+     * @return ImageManager
+     */
     public function encrypt(): self
     {
         return $this->encryptImage($this->image);
     }
 
-    public function decryptImage(Image &$image): self
+    /**
+     * @param Image $image
+     * @return ImageManager
+     */
+    public function decryptImage(Image $image): self
     {
         $image->decrypt();
         return $this;
     }
 
+    /**
+     * @return ImageManager
+     */
     public function decrypt(): self
     {
         return $this->decryptImage($this->image);
     }
 
-    private function getAdjustedImageCropDimensions(Image &$image, int $width, int $height, bool $relative = false): array
+    /**
+     * @param Image $image
+     * @param int $width
+     * @param int $height
+     * @param bool $relative
+     * @return array
+     */
+    private function getAdjustedImageCropDimensions(Image $image, int $width, int $height, bool $relative = false): array
     {
         $w = $image->getWidth() / $width;
         $h = $image->getHeight() / $height;
@@ -155,10 +236,17 @@ class ImageManager
         }
     }
 
-    private function getAdjustedImageDimensions(Image &$image, int $width, int $height, bool $crop = false): array
+    /**
+     * @param Image $image
+     * @param int $width
+     * @param int $height
+     * @param bool $crop
+     * @return array
+     */
+    private function getAdjustedImageDimensions(Image $image, int $width, int $height, bool $crop = false): array
     {
-        if ($image->getWidth() / $image->getHeight() > $width / $height) {		/// current is wider than new
-            if ($crop) {	/// upscale prevention
+        if ($image->getWidth() / $image->getHeight() > $width / $height) {		// current is wider than new
+            if (true === $crop) {	// upscale prevention
                 return [
                     'width' => $this->getImageWidth($image, $height),
                     'height' => $height,
@@ -169,8 +257,8 @@ class ImageManager
                     'height' => $this->getImageHeight($image, $width),
                 ];
             }
-        } elseif ($image->getWidth() / $image->getHeight() < $width / $height) {	/// current is taller than new
-            if ($crop) {	/// upscale prevention
+        } elseif ($image->getWidth() / $image->getHeight() < $width / $height) {	// current is taller than new
+            if (true === $crop) {	// upscale prevention
                 return [
                     'width' => $width,
                     'height' => $this->getImageHeight($image, $width),
@@ -181,7 +269,7 @@ class ImageManager
                     'height' => $height,
                 ];
             }
-        } else {									/// current has same aspect ratio as new
+        } else {									// current has same aspect ratio as new
             return [
                 'width' => $width,
                 'height' => $height,
@@ -189,15 +277,20 @@ class ImageManager
         }
     }
 
-    public function addImageWatermark(Image &$image, array $parameters): self
+    /**
+     * @param Image $image
+     * @param array $parameters
+     * @return ImageManager
+     */
+    public function addImageWatermark(Image $image, array $parameters): self
     {
-        $watermark = new Image($parameters['file'], null, $this->secret, $this->autorotate);
+        $watermark = new Image($this->secret, $parameters['file'], null, $this->autorotate);
 
-        /// temporarily enable alphablending to be able to use 32-bit images
+        // temporarily enable alphablending to be able to use 32-bit images
         imagealphablending($watermark->getData(), true);
         imagealphablending($image->getData(), true);
 
-        /// determine watermark position from config
+        // determine watermark position from config
         if (true === isset($parameters['position'])) {
             $top = intval($parameters['position']['top']) / 100;
             $left = intval($parameters['position']['left']) / 100;
@@ -205,44 +298,100 @@ class ImageManager
             $top = $left = 1;
         }
 
-        /// determine watermark size from config
+        // determine watermark size from config
         if (true === isset($parameters['size'])) {
-            if ('cover' === $parameters['size']) {
-                /// cover dimensions are the same as crop dimensions
+            if (self::WATERMARK_SIZE_COVER === $parameters['size']) {
+                // cover dimensions are the same as crop dimensions
                 $dimensions = $this->getAdjustedImageCropDimensions($watermark, $image->getWidth(), $image->getHeight(), true);
-                imagecopyresampled($image->getData(), $watermark->getData(), 0, 0, ($watermark->getWidth() - $dimensions['width']) * $left, ($watermark->getHeight() - $dimensions['height']) * $top, $image->getWidth(), $image->getHeight(), $dimensions['width'], $dimensions['height']);
-            } elseif ('contain' === $parameters['size']) {
+                imagecopyresampled(
+                    $image->getData(),
+                    $watermark->getData(),
+                    0,
+                    0,
+                    (int)(($watermark->getWidth() - $dimensions['width']) * $left),
+                    (int)(($watermark->getHeight() - $dimensions['height']) * $top),
+                    $image->getWidth(),
+                    $image->getHeight(),
+                    $dimensions['width'],
+                    $dimensions['height']
+                );
+            } elseif (self::WATERMARK_SIZE_CONTAIN === $parameters['size']) {
                 $dimensions = $this->getAdjustedImageDimensions($watermark, $image->getWidth(), $image->getHeight());
-                imagecopyresampled($image->getData(), $watermark->getData(), ($image->getWidth() - $dimensions['width']) * $left, ($image->getHeight() - $dimensions['height']) * $top, 0, 0, $dimensions['width'], $dimensions['height'], $watermark->getWidth(), $watermark->getHeight());
-            } else {		/// percentage
+                imagecopyresampled(
+                    $image->getData(),
+                    $watermark->getData(),
+                    (int)(($image->getWidth() - $dimensions['width']) * $left),
+                    (int)(($image->getHeight() - $dimensions['height']) * $top),
+                    0,
+                    0,
+                    $dimensions['width'],
+                    $dimensions['height'],
+                    $watermark->getWidth(),
+                    $watermark->getHeight()
+                );
+            } else {		// percentage
                 $dimensions = $this->getAdjustedImageDimensions($watermark, $image->getWidth(), $image->getHeight());
                 $dimensions['width'] *= (intval($parameters['size']) / 100);
                 $dimensions['height'] *= (intval($parameters['size']) / 100);
-                imagecopyresampled($image->getData(), $watermark->getData(), ($image->getWidth() - $dimensions['width']) * $left, ($image->getHeight() - $dimensions['height']) * $top, 0, 0, $dimensions['width'], $dimensions['height'], $watermark->getWidth(), $watermark->getHeight());
+                imagecopyresampled(
+                    $image->getData(),
+                    $watermark->getData(),
+                    (int)(($image->getWidth() - $dimensions['width']) * $left),
+                    (int)(($image->getHeight() - $dimensions['height']) * $top),
+                    0,
+                    0,
+                    $dimensions['width'],
+                    $dimensions['height'],
+                    $watermark->getWidth(),
+                    $watermark->getHeight()
+                );
             }
         } else {
-            imagecopy($image->getData(), $watermark->getData(), ($image->getWidth() - $watermark->getWidth()) * $left, ($image->getHeight() - $watermark->getHeight()) * $top, 0, 0, $watermark->getWidth(), $watermark->getHeight());
+            imagecopy(
+                $image->getData(),
+                $watermark->getData(),
+                (int)(($image->getWidth() - $watermark->getWidth()) * $left),
+                (int)(($image->getHeight() - $watermark->getHeight()) * $top),
+                0,
+                0,
+                $watermark->getWidth(),
+                $watermark->getHeight()
+            );
         }
 
-        /// disable alphablending again to be able to save transparency
+        // disable alphablending again to be able to save transparency
         imagealphablending($watermark->getData(), false);
         imagealphablending($image->getData(), false);
 
         return $this;
     }
 
+    /**
+     * @param array $parameters
+     * @return ImageManager
+     */
     public function addWatermark(array $parameters): self
     {
         return $this->addImageWatermark($this->image, $parameters);
     }
 
-    private function getImageWidth(Image &$image, int $height): int
+    /**
+     * @param Image $image
+     * @param int $height
+     * @return int
+     */
+    private function getImageWidth(Image $image, int $height): int
     {
-        return intval($height * ($image->getWidth() / $image->getHeight()));
+        return (int)($height * ($image->getWidth() / $image->getHeight()));
     }
 
-    private function getImageHeight(Image &$image, int $width): int
+    /**
+     * @param Image $image
+     * @param int $width
+     * @return int
+     */
+    private function getImageHeight(Image $image, int $width): int
     {
-        return intval($width * ($this->image->getHeight() / $this->image->getWidth()));
+        return (int)($width * ($image->getHeight() / $image->getWidth()));
     }
 }
