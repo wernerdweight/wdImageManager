@@ -1,0 +1,11 @@
+language: php
+
+php:
+  - '7.1'
+  - '7.2'
+
+script:
+  - composer install
+  - composer phpstan
+  - composer phpcs
+  - composer phpunit
