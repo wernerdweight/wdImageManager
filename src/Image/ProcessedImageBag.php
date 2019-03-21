@@ -28,16 +28,17 @@ class ProcessedImageBag
     protected $assetPath;
 
     /** @var array */
-    protected $exifData;
+    protected $exifData = [];
 
     /** @var bool */
     protected $autorotate;
 
     /**
      * ProcessedImageBag constructor.
+     *
      * @param string $assetPath
      * @param string $originalName
-     * @param bool $autorotate
+     * @param bool   $autorotate
      */
     public function __construct(string $assetPath, string $originalName, bool $autorotate = false)
     {

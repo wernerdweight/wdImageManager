@@ -12,19 +12,20 @@ class ImageManager
     /** @var string */
     private const WATERMARK_SIZE_CONTAIN = 'contain';
 
-    /** @var Image */
-    private $image;
+    /** @var bool */
+    private $autorotate;
 
     /** @var string */
     private $secret;
 
-    /** @var bool */
-    private $autorotate;
+    /** @var Image */
+    private $image;
 
     /**
      * ImageManager constructor.
+     *
      * @param string $secret
-     * @param bool $autorotate
+     * @param bool   $autorotate
      */
     public function __construct(string $secret, bool $autorotate = false)
     {
@@ -34,6 +35,7 @@ class ImageManager
 
     /**
      * @param string $path
+     *
      * @return ImageManager
      */
     public function loadImage(string $path): self
@@ -43,10 +45,11 @@ class ImageManager
     }
 
     /**
-     * @param string $path
-     * @param string $name
+     * @param string      $path
+     * @param string      $name
      * @param null|string $extension
-     * @param int $quality
+     * @param int         $quality
+     *
      * @return ImageManager
      */
     public function saveImage(string $path, string $name, ?string $extension = null, int $quality = 100): self
@@ -57,12 +60,13 @@ class ImageManager
 
     /**
      * @param Image $image
-     * @param int $width
-     * @param int $height
-     * @param bool $crop
-     * @return ImageManager
+     * @param int   $width
+     * @param int   $height
+     * @param bool  $crop
+     *
+     * @return Image
      */
-    public function resizeImage(Image $image, int $width, int $height, bool $crop = false): self
+    public function resizeImage(Image $image, int $width, int $height, bool $crop = false): Image
     {
         if (true === $image->getEncrypted()) {
             $this->decryptImage($image);
@@ -90,33 +94,36 @@ class ImageManager
         $image = $tmp;
 
         if (true === $crop) {
-            $this->cropImage($image, $width, $height);
+            $image = $this->cropImage($image, $width, $height);
         }
 
         if (true === $encrypt) {
-            $this->encryptImage($image);
+            $image = $this->encryptImage($image);
         }
-        return $this;
+        return $image;
     }
 
     /**
-     * @param int $width
-     * @param int $height
+     * @param int  $width
+     * @param int  $height
      * @param bool $crop
+     *
      * @return ImageManager
      */
     public function resize(int $width, int $height, bool $crop = false): self
     {
-        return $this->resizeImage($this->image, $width, $height, $crop);
+        $this->image = $this->resizeImage($this->image, $width, $height, $crop);
+        return $this;
     }
 
     /**
      * @param Image $image
-     * @param int $width
-     * @param int $height
-     * @return ImageManager
+     * @param int   $width
+     * @param int   $height
+     *
+     * @return Image
      */
-    public function cropImage(Image $image, int $width, int $height): self
+    public function cropImage(Image $image, int $width, int $height): Image
     {
         if (true === $image->getEncrypted()) {
             $this->decryptImage($image);
@@ -146,29 +153,31 @@ class ImageManager
         $image = $tmp;
 
         if (true === $encrypt) {
-            $this->encryptImage($image);
+            $image = $this->encryptImage($image);
         }
-        return $this;
+        return $image;
     }
 
     /**
      * @param int $width
      * @param int $height
+     *
      * @return ImageManager
      */
     public function crop(int $width, int $height): self
     {
-        return $this->cropImage($this->image, $width, $height);
+        $this->image = $this->cropImage($this->image, $width, $height);
+        return $this;
     }
 
     /**
      * @param Image $image
-     * @return ImageManager
+     *
+     * @return Image
      */
-    public function encryptImage(Image $image): self
+    public function encryptImage(Image $image): Image
     {
-        $image->encrypt();
-        return $this;
+        return $image->encrypt();
     }
 
     /**
@@ -176,17 +185,18 @@ class ImageManager
      */
     public function encrypt(): self
     {
-        return $this->encryptImage($this->image);
+        $this->image = $this->encryptImage($this->image);
+        return $this;
     }
 
     /**
      * @param Image $image
-     * @return ImageManager
+     *
+     * @return Image
      */
-    public function decryptImage(Image $image): self
+    public function decryptImage(Image $image): Image
     {
-        $image->decrypt();
-        return $this;
+        return $image->decrypt();
     }
 
     /**
@@ -194,18 +204,24 @@ class ImageManager
      */
     public function decrypt(): self
     {
-        return $this->decryptImage($this->image);
+        $this->image = $this->decryptImage($this->image);
+        return $this;
     }
 
     /**
      * @param Image $image
-     * @param int $width
-     * @param int $height
-     * @param bool $relative
+     * @param int   $width
+     * @param int   $height
+     * @param bool  $relative
+     *
      * @return array
      */
-    private function getAdjustedImageCropDimensions(Image $image, int $width, int $height, bool $relative = false): array
-    {
+    private function getAdjustedImageCropDimensions(
+        Image $image,
+        int $width,
+        int $height,
+        bool $relative = false
+    ): array {
         $w = $image->getWidth() / $width;
         $h = $image->getHeight() / $height;
 
@@ -238,9 +254,10 @@ class ImageManager
 
     /**
      * @param Image $image
-     * @param int $width
-     * @param int $height
-     * @param bool $crop
+     * @param int   $width
+     * @param int   $height
+     * @param bool  $crop
+     *
      * @return array
      */
     private function getAdjustedImageDimensions(Image $image, int $width, int $height, bool $crop = false): array
@@ -280,9 +297,10 @@ class ImageManager
     /**
      * @param Image $image
      * @param array $parameters
-     * @return ImageManager
+     *
+     * @return Image
      */
-    public function addImageWatermark(Image $image, array $parameters): self
+    public function addImageWatermark(Image $image, array $parameters): Image
     {
         $watermark = new Image($this->secret, $parameters['file'], null, $this->autorotate);
 
@@ -295,14 +313,20 @@ class ImageManager
             $top = intval($parameters['position']['top']) / 100;
             $left = intval($parameters['position']['left']) / 100;
         } else {
-            $top = $left = 1;
+            $top = 1;
+            $left = 1;
         }
 
         // determine watermark size from config
         if (true === isset($parameters['size'])) {
             if (self::WATERMARK_SIZE_COVER === $parameters['size']) {
                 // cover dimensions are the same as crop dimensions
-                $dimensions = $this->getAdjustedImageCropDimensions($watermark, $image->getWidth(), $image->getHeight(), true);
+                $dimensions = $this->getAdjustedImageCropDimensions(
+                    $watermark,
+                    $image->getWidth(),
+                    $image->getHeight(),
+                    true
+                );
                 imagecopyresampled(
                     $image->getData(),
                     $watermark->getData(),
@@ -363,21 +387,24 @@ class ImageManager
         imagealphablending($watermark->getData(), false);
         imagealphablending($image->getData(), false);
 
-        return $this;
+        return $image;
     }
 
     /**
      * @param array $parameters
+     *
      * @return ImageManager
      */
     public function addWatermark(array $parameters): self
     {
-        return $this->addImageWatermark($this->image, $parameters);
+        $this->image = $this->addImageWatermark($this->image, $parameters);
+        return $this;
     }
 
     /**
      * @param Image $image
-     * @param int $height
+     * @param int   $height
+     *
      * @return int
      */
     private function getImageWidth(Image $image, int $height): int
@@ -387,7 +414,8 @@ class ImageManager
 
     /**
      * @param Image $image
-     * @param int $width
+     * @param int   $width
+     *
      * @return int
      */
     private function getImageHeight(Image $image, int $width): int
