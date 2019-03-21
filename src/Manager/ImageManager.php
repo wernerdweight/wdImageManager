@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace WernerDweight\ImageManager\Manager;
 
 use WernerDweight\ImageManager\Image\Image;
-use WernerDweight\ImageManagerBundle\Service\ImageManagerUtility;
 
 class ImageManager
 {
@@ -13,19 +12,20 @@ class ImageManager
     /** @var string */
     private const WATERMARK_SIZE_CONTAIN = 'contain';
 
-    /** @var Image */
-    private $image;
+    /** @var bool */
+    private $autorotate;
 
     /** @var string */
     private $secret;
 
-    /** @var bool */
-    private $autorotate;
+    /** @var Image */
+    private $image;
 
     /**
      * ImageManager constructor.
+     *
      * @param string $secret
-     * @param bool $autorotate
+     * @param bool   $autorotate
      */
     public function __construct(string $secret, bool $autorotate = false)
     {
@@ -35,6 +35,7 @@ class ImageManager
 
     /**
      * @param string $path
+     *
      * @return ImageManager
      */
     public function loadImage(string $path): self
@@ -44,10 +45,11 @@ class ImageManager
     }
 
     /**
-     * @param string $path
-     * @param string $name
+     * @param string      $path
+     * @param string      $name
      * @param null|string $extension
-     * @param int $quality
+     * @param int         $quality
+     *
      * @return ImageManager
      */
     public function saveImage(string $path, string $name, ?string $extension = null, int $quality = 100): self
@@ -58,9 +60,10 @@ class ImageManager
 
     /**
      * @param Image $image
-     * @param int $width
-     * @param int $height
-     * @param bool $crop
+     * @param int   $width
+     * @param int   $height
+     * @param bool  $crop
+     *
      * @return Image
      */
     public function resizeImage(Image $image, int $width, int $height, bool $crop = false): Image
@@ -101,9 +104,10 @@ class ImageManager
     }
 
     /**
-     * @param int $width
-     * @param int $height
+     * @param int  $width
+     * @param int  $height
      * @param bool $crop
+     *
      * @return ImageManager
      */
     public function resize(int $width, int $height, bool $crop = false): self
@@ -114,8 +118,9 @@ class ImageManager
 
     /**
      * @param Image $image
-     * @param int $width
-     * @param int $height
+     * @param int   $width
+     * @param int   $height
+     *
      * @return Image
      */
     public function cropImage(Image $image, int $width, int $height): Image
@@ -156,6 +161,7 @@ class ImageManager
     /**
      * @param int $width
      * @param int $height
+     *
      * @return ImageManager
      */
     public function crop(int $width, int $height): self
@@ -166,6 +172,7 @@ class ImageManager
 
     /**
      * @param Image $image
+     *
      * @return Image
      */
     public function encryptImage(Image $image): Image
@@ -184,6 +191,7 @@ class ImageManager
 
     /**
      * @param Image $image
+     *
      * @return Image
      */
     public function decryptImage(Image $image): Image
@@ -202,13 +210,18 @@ class ImageManager
 
     /**
      * @param Image $image
-     * @param int $width
-     * @param int $height
-     * @param bool $relative
+     * @param int   $width
+     * @param int   $height
+     * @param bool  $relative
+     *
      * @return array
      */
-    private function getAdjustedImageCropDimensions(Image $image, int $width, int $height, bool $relative = false): array
-    {
+    private function getAdjustedImageCropDimensions(
+        Image $image,
+        int $width,
+        int $height,
+        bool $relative = false
+    ): array {
         $w = $image->getWidth() / $width;
         $h = $image->getHeight() / $height;
 
@@ -241,9 +254,10 @@ class ImageManager
 
     /**
      * @param Image $image
-     * @param int $width
-     * @param int $height
-     * @param bool $crop
+     * @param int   $width
+     * @param int   $height
+     * @param bool  $crop
+     *
      * @return array
      */
     private function getAdjustedImageDimensions(Image $image, int $width, int $height, bool $crop = false): array
@@ -283,6 +297,7 @@ class ImageManager
     /**
      * @param Image $image
      * @param array $parameters
+     *
      * @return Image
      */
     public function addImageWatermark(Image $image, array $parameters): Image
@@ -298,14 +313,20 @@ class ImageManager
             $top = intval($parameters['position']['top']) / 100;
             $left = intval($parameters['position']['left']) / 100;
         } else {
-            $top = $left = 1;
+            $top = 1;
+            $left = 1;
         }
 
         // determine watermark size from config
         if (true === isset($parameters['size'])) {
             if (self::WATERMARK_SIZE_COVER === $parameters['size']) {
                 // cover dimensions are the same as crop dimensions
-                $dimensions = $this->getAdjustedImageCropDimensions($watermark, $image->getWidth(), $image->getHeight(), true);
+                $dimensions = $this->getAdjustedImageCropDimensions(
+                    $watermark,
+                    $image->getWidth(),
+                    $image->getHeight(),
+                    true
+                );
                 imagecopyresampled(
                     $image->getData(),
                     $watermark->getData(),
@@ -371,6 +392,7 @@ class ImageManager
 
     /**
      * @param array $parameters
+     *
      * @return ImageManager
      */
     public function addWatermark(array $parameters): self
@@ -381,7 +403,8 @@ class ImageManager
 
     /**
      * @param Image $image
-     * @param int $height
+     * @param int   $height
+     *
      * @return int
      */
     private function getImageWidth(Image $image, int $height): int
@@ -391,7 +414,8 @@ class ImageManager
 
     /**
      * @param Image $image
-     * @param int $width
+     * @param int   $width
+     *
      * @return int
      */
     private function getImageHeight(Image $image, int $width): int
