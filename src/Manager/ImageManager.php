@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace WernerDweight\ImageManager\Manager;
 
 use WernerDweight\ImageManager\Image\Image;
+use WernerDweight\ImageManagerBundle\Service\ImageManagerUtility;
 
 class ImageManager
 {
@@ -60,9 +61,9 @@ class ImageManager
      * @param int $width
      * @param int $height
      * @param bool $crop
-     * @return ImageManager
+     * @return Image
      */
-    public function resizeImage(Image $image, int $width, int $height, bool $crop = false): self
+    public function resizeImage(Image $image, int $width, int $height, bool $crop = false): Image
     {
         if (true === $image->getEncrypted()) {
             $this->decryptImage($image);
@@ -90,13 +91,13 @@ class ImageManager
         $image = $tmp;
 
         if (true === $crop) {
-            $this->cropImage($image, $width, $height);
+            $image = $this->cropImage($image, $width, $height);
         }
 
         if (true === $encrypt) {
-            $this->encryptImage($image);
+            $image = $this->encryptImage($image);
         }
-        return $this;
+        return $image;
     }
 
     /**
@@ -107,16 +108,17 @@ class ImageManager
      */
     public function resize(int $width, int $height, bool $crop = false): self
     {
-        return $this->resizeImage($this->image, $width, $height, $crop);
+        $this->image = $this->resizeImage($this->image, $width, $height, $crop);
+        return $this;
     }
 
     /**
      * @param Image $image
      * @param int $width
      * @param int $height
-     * @return ImageManager
+     * @return Image
      */
-    public function cropImage(Image $image, int $width, int $height): self
+    public function cropImage(Image $image, int $width, int $height): Image
     {
         if (true === $image->getEncrypted()) {
             $this->decryptImage($image);
@@ -146,9 +148,9 @@ class ImageManager
         $image = $tmp;
 
         if (true === $encrypt) {
-            $this->encryptImage($image);
+            $image = $this->encryptImage($image);
         }
-        return $this;
+        return $image;
     }
 
     /**
@@ -158,17 +160,17 @@ class ImageManager
      */
     public function crop(int $width, int $height): self
     {
-        return $this->cropImage($this->image, $width, $height);
+        $this->image = $this->cropImage($this->image, $width, $height);
+        return $this;
     }
 
     /**
      * @param Image $image
-     * @return ImageManager
+     * @return Image
      */
-    public function encryptImage(Image $image): self
+    public function encryptImage(Image $image): Image
     {
-        $image->encrypt();
-        return $this;
+        return $image->encrypt();
     }
 
     /**
@@ -176,17 +178,17 @@ class ImageManager
      */
     public function encrypt(): self
     {
-        return $this->encryptImage($this->image);
+        $this->image = $this->encryptImage($this->image);
+        return $this;
     }
 
     /**
      * @param Image $image
-     * @return ImageManager
+     * @return Image
      */
-    public function decryptImage(Image $image): self
+    public function decryptImage(Image $image): Image
     {
-        $image->decrypt();
-        return $this;
+        return $image->decrypt();
     }
 
     /**
@@ -194,7 +196,8 @@ class ImageManager
      */
     public function decrypt(): self
     {
-        return $this->decryptImage($this->image);
+        $this->image = $this->decryptImage($this->image);
+        return $this;
     }
 
     /**
@@ -280,9 +283,9 @@ class ImageManager
     /**
      * @param Image $image
      * @param array $parameters
-     * @return ImageManager
+     * @return Image
      */
-    public function addImageWatermark(Image $image, array $parameters): self
+    public function addImageWatermark(Image $image, array $parameters): Image
     {
         $watermark = new Image($this->secret, $parameters['file'], null, $this->autorotate);
 
@@ -363,7 +366,7 @@ class ImageManager
         imagealphablending($watermark->getData(), false);
         imagealphablending($image->getData(), false);
 
-        return $this;
+        return $image;
     }
 
     /**
@@ -372,7 +375,8 @@ class ImageManager
      */
     public function addWatermark(array $parameters): self
     {
-        return $this->addImageWatermark($this->image, $parameters);
+        $this->image = $this->addImageWatermark($this->image, $parameters);
+        return $this;
     }
 
     /**

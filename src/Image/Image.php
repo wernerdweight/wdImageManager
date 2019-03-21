@@ -113,7 +113,7 @@ class Image
     private function autoRotate(string $path): self
     {
         $exifData = exif_read_data($path);
-        if (true === array_key_exists('Orientation', $exifData['Orientation'])) {
+        if (true === array_key_exists('Orientation', $exifData)) {
             $imageData = null;
             switch ($exifData['Orientation']) {
                 case self::ORIENTATION_UPSIDE_DOWN:
