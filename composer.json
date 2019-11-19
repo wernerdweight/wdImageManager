@@ -23,7 +23,7 @@
     },
 
     "require-dev": {
-        "wernerdweight/cs": "*"
+        "wernerdweight/cs": "^1.2.1"
     },
 
     "autoload": {
@@ -36,11 +36,13 @@
     },
 
     "scripts": {
-        "fix": "phpcbf --standard=vendor/wernerdweight/cs/WernerDweight/CS/src/ruleset.xml --extensions=php --encoding=utf-8 --tab-width=4 -sp ./src/ ./tests/ && php-cs-fixer fix --config=vendor/wernerdweight/cs/WernerDweight/CS/.php_cs.dist --verbose --diff ./src/ ./tests/",
+        "fix": "ecs check ./src/ ./tests/ --config ecs.yaml --fix",
         "phpstan": "phpstan analyse ./src/ ./tests/ --level max",
-        "phpcs": "phpcs --standard=vendor/wernerdweight/cs/WernerDweight/CS/src/ruleset.xml --extensions=php --encoding=utf-8 --tab-width=4 -sp ./src/ ./tests/",
-        "phpcs-fix": "php-cs-fixer fix --config=vendor/wernerdweight/cs/WernerDweight/CS/.php_cs.dist --dry-run --verbose --diff ./src/ ./tests/",
-        "phpunit": "phpunit"
+        "phpmd": "phpmd ./src/ text vendor/wernerdweight/cs/WernerDweight/CS/phpmd.xml",
+        "ecs": "ecs check ./src/ --config ecs.yaml",
+        "ecs-fix": "ecs check ./src/ ./tests/ --config ecs.yaml --fix",
+        "phpunit": "phpunit",
+        "victor": "victor"
     }
 
 }

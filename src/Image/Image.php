@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace WernerDweight\ImageManager\Image;
 
+use WernerDweight\ImageManager\Exception\ImageException;
+
 class Image
 {
     /** @var string */
@@ -58,11 +60,12 @@ class Image
 
     /**
      * Image constructor.
-     * @param string $secret
+     *
+     * @param string      $secret
      * @param null|string $path
      * @param null|string $extension
-     * @param bool $autorotate
-     * @param string $encryptionMethod
+     * @param bool        $autorotate
+     * @param string      $encryptionMethod
      */
     public function __construct(
         string $secret,
@@ -85,6 +88,7 @@ class Image
     /**
      * @param int $width
      * @param int $height
+     *
      * @return Image
      */
     public function create(int $width, int $height): self
@@ -93,7 +97,7 @@ class Image
         $this->height = $height;
         $imageData = imagecreatetruecolor($this->width, $this->height);
         if (false === $imageData) {
-            throw new \RuntimeException('Unable to create new image!');
+            throw new ImageException('Unable to create new image!');
         }
         $this->workingData = $imageData;
         if (self::FORMAT_PNG === $this->extension) {
@@ -108,12 +112,13 @@ class Image
 
     /**
      * @param string $path
+     *
      * @return Image
      */
     private function autoRotate(string $path): self
     {
         $exifData = exif_read_data($path);
-        if (true === array_key_exists('Orientation', $exifData['Orientation'])) {
+        if (false !== $exifData && true === array_key_exists('Orientation', $exifData)) {
             $imageData = null;
             switch ($exifData['Orientation']) {
                 case self::ORIENTATION_UPSIDE_DOWN:
@@ -135,13 +140,14 @@ class Image
 
     /**
      * @param string $path
+     *
      * @return Image
      */
     private function createFromJpeg(string $path): self
     {
         $imageData = imagecreatefromjpeg($path);
         if (false === $imageData) {
-            throw new \RuntimeException(sprintf('Unable to create JPEG image from %s!', $path));
+            throw new ImageException(sprintf('Unable to create JPEG image from %s!', $path));
         }
         $this->workingData = $imageData;
         $this->encrypted = false;
@@ -153,13 +159,14 @@ class Image
 
     /**
      * @param string $path
+     *
      * @return Image
      */
     private function createFromPng(string $path): self
     {
         $imageData = imagecreatefrompng($path);
         if (false === $imageData) {
-            throw new \RuntimeException(sprintf('Unable to create PNG image from %s!', $path));
+            throw new ImageException(sprintf('Unable to create PNG image from %s!', $path));
         }
         $this->workingData = $imageData;
         $this->setTransparency(false, true);
@@ -169,13 +176,14 @@ class Image
 
     /**
      * @param string $path
+     *
      * @return Image
      */
     private function createFromGif(string $path): self
     {
         $imageData = imagecreatefromgif($path);
         if (false === $imageData) {
-            throw new \RuntimeException(sprintf('Unable to create GIF image from %s!', $path));
+            throw new ImageException(sprintf('Unable to create GIF image from %s!', $path));
         }
         $this->workingData = $imageData;
         $this->setTransparency();
@@ -185,6 +193,7 @@ class Image
 
     /**
      * @param string $path
+     *
      * @return Image
      */
     private function createFromEncrypted(string $path): self
@@ -198,18 +207,19 @@ class Image
 
     /**
      * @param string $path
+     *
      * @return Image
      */
     private function setExtensionFromPath(string $path): self
     {
         $lastDotPosition = strrchr($path, '.');
         if (false === $lastDotPosition) {
-            throw new \RuntimeException('File extension is missing!');
+            throw new ImageException('File extension is missing!');
         }
 
         $originalExtension = strtolower(substr($lastDotPosition, 1));
         if (false === array_key_exists($originalExtension, self::EXTENSION_MAPPING)) {
-            throw new \RuntimeException(sprintf('Unsupported image format %s!', $originalExtension));
+            throw new ImageException(sprintf('Unsupported image format %s!', $originalExtension));
         }
 
         $this->extension = self::EXTENSION_MAPPING[$originalExtension];
@@ -218,6 +228,7 @@ class Image
 
     /**
      * @param string $path
+     *
      * @return Image
      */
     private function loadFromPath(string $path): self
@@ -236,13 +247,14 @@ class Image
                 $this->createFromEncrypted($path);
                 break;
             default:
-                throw new \RuntimeException('This image format is not supported!');
+                throw new ImageException('This image format is not supported!');
         }
         return $this;
     }
 
     /**
      * @param string $path
+     *
      * @return Image
      */
     private function load(string $path): self
@@ -266,10 +278,11 @@ class Image
     }
 
     /**
-     * @param string $path
-     * @param string $name
+     * @param string      $path
+     * @param string      $name
      * @param null|string $extension
-     * @param int $quality
+     * @param int         $quality
+     *
      * @return bool
      */
     public function save(string $path, string $name, ?string $extension = null, int $quality = 100): bool
@@ -298,7 +311,7 @@ class Image
                     imagepng($this->workingData, $filename, (int)round(9 - ((9 * $quality) / 100)));
                     break;
                 default:
-                    throw new \RuntimeException('Unsupported file type');
+                    throw new ImageException('Unsupported file type');
             }
             return false;
         }
@@ -311,7 +324,7 @@ class Image
     {
         $initializationVectorLength = openssl_cipher_iv_length($this->encryptionMethod);
         if (false === $initializationVectorLength) {
-            throw new \RuntimeException('Unable to create initialization vector! Check encryption method.');
+            throw new ImageException('Unable to create initialization vector! Check encryption method.');
         } else {
             return $initializationVectorLength;
         }
@@ -326,7 +339,7 @@ class Image
             $this->getInitializationVectorLength()
         );
         if (false === $initializationVector) {
-            throw new \RuntimeException('Unable to create initialization vector!');
+            throw new ImageException('Unable to create initialization vector!');
         } else {
             return $initializationVector;
         }
@@ -338,7 +351,7 @@ class Image
     public function encrypt(): self
     {
         if ($this->encrypted) {
-            throw new \RuntimeException('Unable to encrypt encrypted image!');
+            throw new ImageException('Unable to encrypt encrypted image!');
         }
 
         // use buffer to get image content
@@ -347,7 +360,7 @@ class Image
         $imageData = ob_get_contents();
         ob_end_clean();
         if (false === $imageData) {
-            throw new \RuntimeException('Unable to fetch image data!');
+            throw new ImageException('Unable to fetch image data!');
         }
 
         $initializationVector = $this->createInitializationVector();
@@ -359,7 +372,7 @@ class Image
             $initializationVector
         );
         if (false === $encryptedData) {
-            throw new \RuntimeException('Data encryption failed!');
+            throw new ImageException('Data encryption failed!');
         }
         /** @var resource $encodedData */
         $encodedData = base64_encode($initializationVector . rtrim($encryptedData, "\0"));
@@ -375,13 +388,13 @@ class Image
     public function decrypt(): self
     {
         if (!$this->encrypted) {
-            throw new \RuntimeException('Unable to decrypt unencrypted image');
+            throw new ImageException('Unable to decrypt unencrypted image');
         }
 
         $encodedData = (string)$this->workingData;
         $decodedData = base64_decode($encodedData);
         if (false === $decodedData) {
-            throw new \RuntimeException('Unable to decode image data!');
+            throw new ImageException('Unable to decode image data!');
         }
 
         $initializationVectorLength = $this->getInitializationVectorLength();
@@ -395,7 +408,7 @@ class Image
             $initializationVector
         );
         if (false === $decryptedData) {
-            throw new \RuntimeException('Unable to decrypt image data!');
+            throw new ImageException('Unable to decrypt image data!');
         }
 
         $decryptedImageData = rtrim($decryptedData, "\0");
@@ -403,7 +416,7 @@ class Image
 
         $imageData = imagecreatefromstring($decryptedImageData);
         if (false === $imageData) {
-            throw new \RuntimeException('Unable to create image from string!');
+            throw new ImageException('Unable to create image from string!');
         }
 
         $this->workingData = $imageData;
@@ -442,6 +455,7 @@ class Image
 
     /**
      * @param resource $data
+     *
      * @return Image
      */
     public function setData($data): self
@@ -477,6 +491,7 @@ class Image
     /**
      * @param bool|null $alphaBlending
      * @param bool|null $saveAlpha
+     *
      * @return Image
      */
     private function setTransparency(?bool $alphaBlending = null, ?bool $saveAlpha = null): self
