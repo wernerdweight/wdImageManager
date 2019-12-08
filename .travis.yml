@@ -3,12 +3,14 @@ language: php
 php:
   - '7.2'
   - '7.3'
+  - '7.4'
 
 script:
   - composer install --ignore-platform-reqs
+  - composer victor show
+  - composer update
   - composer phpstan
   - composer ecs
 # FIXME: fix warnings and allow this
 #  - composer phpmd
   - composer phpunit
-  - composer victor show
