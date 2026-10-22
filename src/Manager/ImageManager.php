@@ -7,16 +7,8 @@ use WernerDweight\ImageManager\Image\Image;
 
 class ImageManager
 {
-    /** @var string */
-    private const WATERMARK_SIZE_COVER = 'cover';
-    /** @var string */
-    private const WATERMARK_SIZE_CONTAIN = 'contain';
-
-    /** @var bool */
-    private $autorotate;
-
-    /** @var string */
-    private $secret;
+    private const string WATERMARK_SIZE_COVER = 'cover';
+    private const string WATERMARK_SIZE_CONTAIN = 'contain';
 
     /** @var Image */
     private $image;
@@ -27,10 +19,8 @@ class ImageManager
      * @param string $secret
      * @param bool   $autorotate
      */
-    public function __construct(string $secret, bool $autorotate = false)
+    public function __construct(private readonly string $secret, private readonly bool $autorotate = false)
     {
-        $this->secret = $secret;
-        $this->autorotate = $autorotate;
     }
 
     /**

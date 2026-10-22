@@ -7,26 +7,17 @@ use WernerDweight\ImageManager\Exception\ImageException;
 
 class Image
 {
-    /** @var string */
-    private const DEFAULT_ENCRYPTION_METHOD = 'AES-256-CBC';
-    /** @var int */
-    private const ORIENTATION_UPSIDE_DOWN = 3;
-    /** @var int */
-    private const ORIENTATION_ROTATE_COUNTER_CLOCKWISE = 6;
-    /** @var int */
-    private const ORIENTATION_ROTATE_CLOCKWISE = 8;
-    /** @var string */
-    private const FORMAT_JPEG = 'jpeg';
-    /** @var string */
-    private const FORMAT_JPG = 'jpg';
-    /** @var string */
-    private const FORMAT_PNG = 'png';
-    /** @var string */
-    private const FORMAT_GIF = 'gif';
-    /** @var string */
-    private const FORMAT_WD_IMAGE = 'wdImage';
+    private const string DEFAULT_ENCRYPTION_METHOD = 'AES-256-CBC';
+    private const int ORIENTATION_UPSIDE_DOWN = 3;
+    private const int ORIENTATION_ROTATE_COUNTER_CLOCKWISE = 6;
+    private const int ORIENTATION_ROTATE_CLOCKWISE = 8;
+    private const string FORMAT_JPEG = 'jpeg';
+    private const string FORMAT_JPG = 'jpg';
+    private const string FORMAT_PNG = 'png';
+    private const string FORMAT_GIF = 'gif';
+    private const string FORMAT_WD_IMAGE = 'wdImage';
     /** @var string[] */
-    private const EXTENSION_MAPPING = [
+    private const array EXTENSION_MAPPING = [
         'jpg' => self::FORMAT_JPEG,
         'jpeg' => self::FORMAT_JPEG,
         'png' => self::FORMAT_PNG,
@@ -46,17 +37,8 @@ class Image
     /** @var resource */
     private $workingData;
 
-    /** @var string */
-    private $secret;
-
     /** @var bool */
     private $encrypted;
-
-    /** @var bool */
-    private $autorotate;
-
-    /** @var string */
-    private $encryptionMethod;
 
     /**
      * Image constructor.
@@ -68,15 +50,12 @@ class Image
      * @param string      $encryptionMethod
      */
     public function __construct(
-        string $secret,
+        private readonly string $secret,
         ?string $path = null,
         ?string $extension = null,
-        bool $autorotate = false,
-        string $encryptionMethod = self::DEFAULT_ENCRYPTION_METHOD
+        private readonly bool $autorotate = false,
+        private readonly string $encryptionMethod = self::DEFAULT_ENCRYPTION_METHOD
     ) {
-        $this->secret = $secret;
-        $this->autorotate = $autorotate;
-        $this->encryptionMethod = $encryptionMethod;
         if (null !== $path) {
             $this->load($path);
         }
@@ -233,22 +212,13 @@ class Image
      */
     private function loadFromPath(string $path): self
     {
-        switch ($this->extension) {
-            case self::FORMAT_JPEG:
-                $this->createFromJpeg($path);
-                break;
-            case self::FORMAT_PNG:
-                $this->createFromPng($path);
-                break;
-            case self::FORMAT_GIF:
-                $this->createFromGif($path);
-                break;
-            case self::FORMAT_WD_IMAGE:
-                $this->createFromEncrypted($path);
-                break;
-            default:
-                throw new ImageException('This image format is not supported!');
-        }
+        match ($this->extension) {
+            self::FORMAT_JPEG => $this->createFromJpeg($path),
+            self::FORMAT_PNG => $this->createFromPng($path),
+            self::FORMAT_GIF => $this->createFromGif($path),
+            self::FORMAT_WD_IMAGE => $this->createFromEncrypted($path),
+            default => throw new ImageException('This image format is not supported!'),
+        };
         return $this;
     }
 
@@ -290,29 +260,19 @@ class Image
         if (false === is_dir($path)) {
             mkdir($path, 0777, true);
         }
-        if (null === $extension) {
-            /** @var string $extension */
-            $extension = $this->extension;
-        }
+        /** @var string $extension */
+        $extension ??= $this->extension;
         if (true === $this->encrypted) {
             file_put_contents($path . $name . '.' . self::FORMAT_WD_IMAGE, $this->workingData);
             return true;
         } elseif (0 !== imagetypes()) {
             $filename = $path . $name . '.' . $extension;
-            switch (strtolower($extension)) {
-                case self::FORMAT_GIF:
-                    imagegif($this->workingData, $filename);
-                    break;
-                case self::FORMAT_JPEG:
-                case self::FORMAT_JPG:
-                    imagejpeg($this->workingData, $filename, $quality);
-                    break;
-                case self::FORMAT_PNG:
-                    imagepng($this->workingData, $filename, (int)round(9 - ((9 * $quality) / 100)));
-                    break;
-                default:
-                    throw new ImageException('Unsupported file type');
-            }
+            match (strtolower($extension)) {
+                self::FORMAT_GIF => imagegif($this->workingData, $filename),
+                self::FORMAT_JPEG, self::FORMAT_JPG => imagejpeg($this->workingData, $filename, $quality),
+                self::FORMAT_PNG => imagepng($this->workingData, $filename, (int)round(9 - ((9 * $quality) / 100))),
+                default => throw new ImageException('Unsupported file type'),
+            };
             return false;
         }
     }

@@ -5,12 +5,9 @@ namespace WernerDweight\ImageManager\Image;
 
 class ProcessedImageBag
 {
-    /** @var string */
-    private const EXIF_EXTENSION_WILDCARD = '/\.jp[e]?g$/i';
-    /** @var int */
-    private const ORIENTATION_ROTATE_COUNTER_CLOCKWISE = 6;
-    /** @var int */
-    private const ORIENTATION_ROTATE_CLOCKWISE = 8;
+    private const string EXIF_EXTENSION_WILDCARD = '/\.jp[e]?g$/i';
+    private const int ORIENTATION_ROTATE_COUNTER_CLOCKWISE = 6;
+    private const int ORIENTATION_ROTATE_CLOCKWISE = 8;
 
     /** @var int */
     protected $originalWidth = 0;
